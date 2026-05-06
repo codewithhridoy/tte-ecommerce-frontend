@@ -8,6 +8,7 @@ import type { ApiPath } from "../shared/endpoints";
 export const API_AUTH_PATHS = {
   AUTH_LOGIN: "/auth/login",
   AUTH_LOGOUT: "/auth/logout",
+  AUTH_OTP_COMPLETE_LOGIN: "/auth/otp/complete-login",
   AUTH_OTP_SEND: "/auth/otp/send",
   AUTH_OTP_VERIFY: "/auth/otp/verify",
   AUTH_REFRESH: "/auth/refresh",
@@ -17,6 +18,7 @@ export const API_AUTH_PATHS = {
 export const API_AUTH_ENDPOINTS = {
   AUTH_LOGIN: API_AUTH_PATHS.AUTH_LOGIN,
   AUTH_LOGOUT: API_AUTH_PATHS.AUTH_LOGOUT,
+  AUTH_OTP_COMPLETE_LOGIN: API_AUTH_PATHS.AUTH_OTP_COMPLETE_LOGIN,
   AUTH_OTP_SEND: API_AUTH_PATHS.AUTH_OTP_SEND,
   AUTH_OTP_VERIFY: API_AUTH_PATHS.AUTH_OTP_VERIFY,
   AUTH_REFRESH: API_AUTH_PATHS.AUTH_REFRESH,

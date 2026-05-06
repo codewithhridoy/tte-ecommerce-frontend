@@ -37,6 +37,19 @@ export async function logout(
   return data;
 }
 
+export async function completeLogin(
+  ...[options]: RequestOptions<FetchOptions<paths[typeof API_AUTH_PATHS.AUTH_OTP_COMPLETE_LOGIN]["post"]>>
+) {
+  const { data, error, response } = await apiClient.POST(API_AUTH_PATHS.AUTH_OTP_COMPLETE_LOGIN, options as FetchOptions<paths[typeof API_AUTH_PATHS.AUTH_OTP_COMPLETE_LOGIN]["post"]>);
+  const status = response.status;
+  if (error) {
+    const errObj = error as unknown as { error?: { message?: string }; message?: string };
+    const msg = errObj?.error?.message ?? errObj?.message ?? "API Error";
+    throw new ApiError(msg, status, errObj);
+  }
+  return data;
+}
+
 export async function sendOtp(
   ...[options]: RequestOptions<FetchOptions<paths[typeof API_AUTH_PATHS.AUTH_OTP_SEND]["post"]>>
 ) {

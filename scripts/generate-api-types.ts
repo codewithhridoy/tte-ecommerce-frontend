@@ -226,6 +226,7 @@ export type RequestOptions<T> = {} extends T ? [options?: T] : [options: T];\n\n
         "/auth/logout": { post: "logout" },
         "/auth/otp/send": { post: "sendOtp" },
         "/auth/otp/verify": { post: "verifyOtp" },
+        "/auth/otp/complete-login": { post: "completeLogin" },
         "/products": { get: "getProducts" },
         "/products/{idOrSlug}": { get: "getProduct" },
         "/cart/items": { post: "addCartItem" },
@@ -315,7 +316,7 @@ function getModuleName(apiPath: string): string {
 }
 
 function getSchemaModuleName(schemaName: string): string {
-  if (/^(Register|Login|Session|Refresh|Logout|SendOtp|VerifyOtp)/.test(schemaName)) return "auth";
+  if (/^(Register|Login|LoginPending|Session|Refresh|Logout|SendOtp|VerifyOtp|CompleteLogin)/.test(schemaName)) return "auth";
   if (/^Product/.test(schemaName)) return "products";
   if (/^(Cart|AddToCart|ApplyCoupon)/.test(schemaName)) return "cart";
   if (/^(Order|CreateOrder)/.test(schemaName)) return "orders";

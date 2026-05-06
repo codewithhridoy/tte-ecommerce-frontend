@@ -73,8 +73,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Authenticate and open a session
-         * @description Verifies credentials and issues an access token (JWT) plus a refresh token (opaque). Both tokens are set as httpOnly cookies. The access token is also returned in the body for clients that prefer the Authorization header. The raw refresh token is **never** returned in the body.
+         * Validate credentials and trigger OTP
+         * @description Verifies email and password. On success, a 6-digit OTP is sent to the user's registered contact (email/SMS) with `purpose: login`. **No session is opened yet.** The client must complete the flow via `POST /auth/otp/complete-login`.
          */
         post: {
             parameters: {
@@ -89,15 +89,13 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description Session opened */
+                /** @description Credentials valid — OTP dispatched */
                 200: {
                     headers: {
-                        /** @description Two httpOnly cookies are set: `access_token` (path /, maxAge = JWT_ACCESS_TTL) and `refresh_token` (path /api/v1/auth, expires = refreshExpiresAt). Both are Secure in production and SameSite=Lax. */
-                        "Set-Cookie"?: string;
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["SessionResponse"];
+                        "application/json": components["schemas"]["LoginPendingResponse"];
                     };
                 };
                 /** @description Validation error */
@@ -109,6 +107,13 @@ export interface paths {
                 };
                 /** @description Invalid credentials */
                 401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description OTP resend cooldown active */
+                412: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -283,6 +288,72 @@ export interface paths {
                 };
                 /** @description Resend cooldown active — try again after resendAllowedAt */
                 412: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/otp/complete-login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Complete login by verifying the OTP
+         * @description Second step of the login flow. Verifies the `login`-purpose OTP issued by `POST /auth/login`, marks it used, and opens a session. On success, access and refresh tokens are issued and set as httpOnly cookies.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CompleteLoginBody"];
+                };
+            };
+            responses: {
+                /** @description OTP verified — session opened */
+                200: {
+                    headers: {
+                        /** @description Two httpOnly cookies are set: `access_token` (path /, maxAge = JWT_ACCESS_TTL) and `refresh_token` (path /api/v1/auth, expires = refreshExpiresAt). Both are Secure in production and SameSite=Lax. */
+                        "Set-Cookie"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SessionResponse"];
+                    };
+                };
+                /** @description Validation error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Invalid or expired OTP */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description User not found or inactive */
+                404: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -727,6 +798,38 @@ export interface components {
             /** @example Jane Doe */
             fullName?: string;
         };
+        LoginPendingResponse: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                /**
+                 * @description Always true. A 6-digit OTP has been sent to the user's registered contact.
+                 * @enum {boolean}
+                 */
+                requiresOtp: true;
+                /**
+                 * Format: uuid
+                 * @description The user ID required to complete the login via POST /auth/otp/complete-login.
+                 * @example 01910000-0000-7000-0000-000000000001
+                 */
+                userId: string;
+                /**
+                 * Format: date-time
+                 * @description Earliest time the OTP may be resent (60-second cooldown).
+                 * @example 2026-05-07T12:01:00.000Z
+                 */
+                resendAllowedAt: string;
+            };
+        };
+        LoginBody: {
+            /**
+             * Format: email
+             * @example user@example.com
+             */
+            email: string;
+            /** @example s3cur3p@ssw0rd */
+            password: string;
+        };
         SessionResponse: {
             /** @enum {boolean} */
             success: true;
@@ -742,15 +845,6 @@ export interface components {
                  */
                 refreshExpiresAt: string;
             };
-        };
-        LoginBody: {
-            /**
-             * Format: email
-             * @example user@example.com
-             */
-            email: string;
-            /** @example s3cur3p@ssw0rd */
-            password: string;
         };
         RefreshBody: {
             /** @example <opaque-refresh-token> */
@@ -785,6 +879,15 @@ export interface components {
              * @enum {string}
              */
             purpose: "email_verification" | "login" | "password_reset";
+        };
+        CompleteLoginBody: {
+            /**
+             * Format: uuid
+             * @example 01910000-0000-7000-0000-000000000001
+             */
+            userId: string;
+            /** @example 482916 */
+            code: string;
         };
         VerifyOtpResponse: {
             /** @enum {boolean} */
@@ -992,12 +1095,14 @@ export interface components {
 }
 export type SchemaRegisterResponse = components['schemas']['RegisterResponse'];
 export type SchemaRegisterBody = components['schemas']['RegisterBody'];
-export type SchemaSessionResponse = components['schemas']['SessionResponse'];
+export type SchemaLoginPendingResponse = components['schemas']['LoginPendingResponse'];
 export type SchemaLoginBody = components['schemas']['LoginBody'];
+export type SchemaSessionResponse = components['schemas']['SessionResponse'];
 export type SchemaRefreshBody = components['schemas']['RefreshBody'];
 export type SchemaLogoutBody = components['schemas']['LogoutBody'];
 export type SchemaSendOtpResponse = components['schemas']['SendOtpResponse'];
 export type SchemaSendOtpBody = components['schemas']['SendOtpBody'];
+export type SchemaCompleteLoginBody = components['schemas']['CompleteLoginBody'];
 export type SchemaVerifyOtpResponse = components['schemas']['VerifyOtpResponse'];
 export type SchemaVerifyOtpBody = components['schemas']['VerifyOtpBody'];
 export type SchemaProductVariant = components['schemas']['ProductVariant'];

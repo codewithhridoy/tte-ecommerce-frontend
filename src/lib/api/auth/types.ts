@@ -6,7 +6,9 @@
 import type { components, paths } from "../schema.d.ts";
 import type { SuccessResponse } from "../shared/types";
 
+export type SchemaCompleteLoginBody = components["schemas"]["CompleteLoginBody"];
 export type SchemaLoginBody = components["schemas"]["LoginBody"];
+export type SchemaLoginPendingResponse = components["schemas"]["LoginPendingResponse"];
 export type SchemaLogoutBody = components["schemas"]["LogoutBody"];
 export type SchemaRefreshBody = components["schemas"]["RefreshBody"];
 export type SchemaRegisterBody = components["schemas"]["RegisterBody"];
@@ -23,6 +25,9 @@ export type AuthLoginPostResponse = SuccessResponse<AuthLoginPost>;
 export type AuthLogoutPost = NonNullable<paths["/auth/logout"]["post"]>;
 export type AuthLogoutPostQuery = NonNullable<AuthLogoutPost["parameters"]["query"]>;
 export type AuthLogoutPostResponse = SuccessResponse<AuthLogoutPost>;
+export type AuthOtpCompleteLoginPost = NonNullable<paths["/auth/otp/complete-login"]["post"]>;
+export type AuthOtpCompleteLoginPostQuery = NonNullable<AuthOtpCompleteLoginPost["parameters"]["query"]>;
+export type AuthOtpCompleteLoginPostResponse = SuccessResponse<AuthOtpCompleteLoginPost>;
 export type AuthOtpSendPost = NonNullable<paths["/auth/otp/send"]["post"]>;
 export type AuthOtpSendPostQuery = NonNullable<AuthOtpSendPost["parameters"]["query"]>;
 export type AuthOtpSendPostResponse = SuccessResponse<AuthOtpSendPost>;
