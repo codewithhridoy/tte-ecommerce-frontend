@@ -1,8 +1,7 @@
 "use client";
 
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { API_PRODUCTS_ENDPOINTS } from "@/lib/api/products";
-import { apiUrl } from "@/lib/api/url";
+import { getProducts } from "@/lib/api/products";
 import type { ProductsGetQuery, ProductsGetResponse, SchemaProduct } from "@/lib/api/products";
 
 type ProductsParams = ProductsGetQuery;
@@ -11,17 +10,10 @@ type ProductsPage = ProductsGetResponse;
 export type Product = SchemaProduct;
 
 async function fetchProducts(params: ProductsParams, cursor?: string): Promise<ProductsPage> {
-  const search = new URLSearchParams();
-  if (params.status) search.set("status", params.status);
-  if (params.limit) search.set("limit", String(params.limit));
-  if (cursor) search.set("cursor", cursor);
-
-  const query = search.toString();
-  const res = await fetch(`${apiUrl(API_PRODUCTS_ENDPOINTS.PRODUCTS)}${query ? `?${query}` : ""}`, {
-    credentials: "include",
+  const data = await getProducts({
+    params: { query: { ...params, ...(cursor ? { cursor } : {}) } },
   });
-  if (!res.ok) throw new Error("Failed to fetch products");
-  return res.json();
+  return data as ProductsPage;
 }
 
 export function useProducts(params: ProductsParams = {}) {
