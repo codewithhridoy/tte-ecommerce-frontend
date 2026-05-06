@@ -42,6 +42,8 @@ export default function CheckoutPage() {
       const order = await createOrder.mutateAsync({
         cartId,
         shippingAddress: values,
+        taxMinor: 0,
+        shippingMinor: 0,
       });
       toast.success(`Order placed! #${order.orderNumber}`);
       router.push(`/checkout/confirmation?order=${order.orderNumber}`);

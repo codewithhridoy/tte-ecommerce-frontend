@@ -2,14 +2,9 @@
 
 import { useMutation } from "@tanstack/react-query";
 import { ApiError } from "@/lib/api/envelope";
+import { API_AUTH_ENDPOINTS } from "@/lib/api/auth";
 import { apiUrl } from "@/lib/api/url";
-import type { SchemaRegisterResponse } from "@/lib/api/schema.d.ts";
-
-interface RegisterInput {
-  email: string;
-  password: string;
-  fullName?: string;
-}
+import type { SchemaRegisterBody, SchemaRegisterResponse } from "@/lib/api/auth";
 
 function getErrorMessage(data: unknown): string {
   if (!data || typeof data !== "object" || !("error" in data)) return "Registration failed";
@@ -23,8 +18,8 @@ function getErrorMessage(data: unknown): string {
 
 export function useRegister() {
   return useMutation({
-    mutationFn: async (input: RegisterInput) => {
-      const res = await fetch(apiUrl("/auth/register"), {
+    mutationFn: async (input: SchemaRegisterBody) => {
+      const res = await fetch(apiUrl(API_AUTH_ENDPOINTS.AUTH_REGISTER), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

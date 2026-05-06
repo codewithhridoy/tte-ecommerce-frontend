@@ -1,8 +1,10 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { API_AUTH_ENDPOINTS } from "@/lib/api/auth";
 import { apiUrl } from "@/lib/api/url";
 import { decodeJwt, isTokenExpired } from "@/lib/api/tokens";
+import type { SchemaSessionResponse } from "@/lib/api/auth";
 
 export interface SessionUser {
   id: string;
@@ -12,13 +14,13 @@ export interface SessionUser {
 }
 
 async function fetchSession(): Promise<SessionUser | null> {
-  const res = await fetch(apiUrl("/auth/refresh"), {
+  const res = await fetch(apiUrl(API_AUTH_ENDPOINTS.AUTH_REFRESH), {
     method: "POST",
     credentials: "include",
   });
   if (!res.ok) return null;
 
-  const data = (await res.json()) as { data?: { accessToken?: string } };
+  const data = (await res.json()) as SchemaSessionResponse;
   const token = data.data?.accessToken;
   const payload = token ? decodeJwt(token) : null;
   if (!payload || isTokenExpired(payload)) return null;

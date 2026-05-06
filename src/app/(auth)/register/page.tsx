@@ -15,6 +15,11 @@ import { Separator } from "@/components/ui/separator";
 import { useRegister } from "@/features/auth/use-register";
 import { useSendOtp } from "@/features/auth/use-send-otp";
 import { useVerifyOtp } from "@/features/auth/use-verify-otp";
+import type {
+  SchemaRegisterResponse,
+  SchemaSendOtpResponse,
+  SchemaVerifyOtpBody,
+} from "@/lib/api/auth";
 
 const schema = z.object({
   email: z.string().email("Invalid email"),
@@ -27,15 +32,17 @@ const otpSchema = z.object({
 });
 
 type FormValues = z.infer<typeof schema>;
-type OtpValues = z.infer<typeof otpSchema>;
+type OtpValues = Pick<SchemaVerifyOtpBody, "code">;
+type RegisteredUser = SchemaRegisterResponse["data"]["user"];
+type OtpMeta = SchemaSendOtpResponse["data"];
 
 export default function RegisterPage() {
   const router = useRouter();
   const register = useRegister();
   const sendOtp = useSendOtp();
   const verifyOtp = useVerifyOtp();
-  const [registeredUser, setRegisteredUser] = useState<{ id: string; email: string } | null>(null);
-  const [otpMeta, setOtpMeta] = useState<{ expiresAt: string; resendAllowedAt: string } | null>(null);
+  const [registeredUser, setRegisteredUser] = useState<RegisteredUser | null>(null);
+  const [otpMeta, setOtpMeta] = useState<OtpMeta | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -51,7 +58,7 @@ export default function RegisterPage() {
     try {
       const result = await register.mutateAsync(values);
       const user = result.data.user;
-      setRegisteredUser({ id: user.id, email: user.email });
+      setRegisteredUser(user);
       const otp = await sendOtp.mutateAsync({ purpose: "email_verification" });
       setOtpMeta(otp.data);
       toast.success("Account created. Check your email for the verification code.");

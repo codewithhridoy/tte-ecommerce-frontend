@@ -2,21 +2,15 @@
 
 import { useMutation } from "@tanstack/react-query";
 import { ApiError } from "@/lib/api/envelope";
+import { API_ORDERS_ENDPOINTS } from "@/lib/api/orders";
 import { apiUrl } from "@/lib/api/url";
-
-interface CreateOrderInput {
-  cartId: string;
-  shippingAddress: Record<string, string>;
-  billingAddress?: Record<string, string>;
-  taxMinor?: number;
-  shippingMinor?: number;
-}
+import type { SchemaCreateOrderBody, SchemaOrder } from "@/lib/api/orders";
 
 export function useCreateOrder() {
   return useMutation({
-    mutationFn: async (input: CreateOrderInput) => {
+    mutationFn: async (input: SchemaCreateOrderBody): Promise<SchemaOrder> => {
       const idempotencyKey = crypto.randomUUID();
-      const res = await fetch(apiUrl("/orders"), {
+      const res = await fetch(apiUrl(API_ORDERS_ENDPOINTS.ORDERS), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

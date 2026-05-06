@@ -2,13 +2,14 @@
 
 import { useMutation } from "@tanstack/react-query";
 import { ApiError } from "@/lib/api/envelope";
+import { API_AUTH_ENDPOINTS } from "@/lib/api/auth";
 import { apiUrl } from "@/lib/api/url";
-import type { SchemaVerifyOtpBody, SchemaVerifyOtpResponse } from "@/lib/api/schema.d.ts";
+import type { SchemaVerifyOtpBody, SchemaVerifyOtpResponse } from "@/lib/api/auth";
 
 export function useVerifyOtp() {
   return useMutation({
     mutationFn: async (input: SchemaVerifyOtpBody) => {
-      const res = await fetch(apiUrl("/auth/otp/verify"), {
+      const res = await fetch(apiUrl(API_AUTH_ENDPOINTS.AUTH_OTP_VERIFY), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

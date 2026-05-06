@@ -2,13 +2,14 @@
 
 import { useMutation } from "@tanstack/react-query";
 import { ApiError } from "@/lib/api/envelope";
+import { API_AUTH_ENDPOINTS } from "@/lib/api/auth";
 import { apiUrl } from "@/lib/api/url";
-import type { SchemaSendOtpBody, SchemaSendOtpResponse } from "@/lib/api/schema.d.ts";
+import type { SchemaSendOtpBody, SchemaSendOtpResponse } from "@/lib/api/auth";
 
 export function useSendOtp() {
   return useMutation({
     mutationFn: async (input: SchemaSendOtpBody) => {
-      const res = await fetch(apiUrl("/auth/otp/send"), {
+      const res = await fetch(apiUrl(API_AUTH_ENDPOINTS.AUTH_OTP_SEND), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

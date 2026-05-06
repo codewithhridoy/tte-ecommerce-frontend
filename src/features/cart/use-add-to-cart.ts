@@ -4,20 +4,11 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useCartStore } from "@/stores/cart-store";
 import { ApiError } from "@/lib/api/envelope";
+import { API_CART_ENDPOINTS } from "@/lib/api/cart";
 import { apiUrl } from "@/lib/api/url";
+import type { SchemaAddToCartBody, SchemaCartResponse } from "@/lib/api/cart";
 
-interface AddToCartInput {
-  variantId: string;
-  quantity: number;
-}
-
-interface CartResponse {
-  success: true;
-  data: {
-    id: string;
-    items: Array<{ id: string; variantId: string; quantity: number; unitPriceMinor: number }>;
-  };
-}
+type AddToCartInput = Pick<SchemaAddToCartBody, "variantId" | "quantity">;
 
 export function useAddToCart() {
   const queryClient = useQueryClient();
@@ -25,14 +16,14 @@ export function useAddToCart() {
 
   return useMutation({
     mutationFn: async (input: AddToCartInput) => {
-      const body: Record<string, unknown> = { ...input };
+      const body: SchemaAddToCartBody = { ...input };
       if (!cartId) {
         const guestToken = crypto.randomUUID();
         body.guestToken = guestToken;
         document.cookie = `tte_guest_token=${guestToken}; path=/; max-age=86400`;
       }
 
-      const res = await fetch(apiUrl("/cart/items"), {
+      const res = await fetch(apiUrl(API_CART_ENDPOINTS.CART_ITEMS), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -44,7 +35,7 @@ export function useAddToCart() {
         const msg = typeof data.error === "string" ? data.error : (data.error?.message ?? "Failed to add to cart");
         throw new ApiError(msg, res.status, data);
       }
-      return data as CartResponse;
+      return data as SchemaCartResponse;
     },
     onSuccess: (data) => {
       setCartId(data.data.id);
