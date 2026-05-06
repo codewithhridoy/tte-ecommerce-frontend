@@ -17,3 +17,5 @@ export type SuccessResponse<T> = T extends { responses: infer Responses }
     : never
   : never;
 
+export type RequestOptions<T> = {} extends T ? [options?: T] : [options: T];
+
