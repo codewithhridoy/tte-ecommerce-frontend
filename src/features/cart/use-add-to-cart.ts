@@ -4,8 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useCartStore } from "@/stores/cart-store";
 import { ApiError } from "@/lib/api/envelope";
-import { API_CART_ENDPOINTS } from "@/lib/api/cart";
-import { apiUrl } from "@/lib/api/url";
+import { addCartItem } from "@/lib/api/cart";
 import type { SchemaAddToCartBody, SchemaCartResponse } from "@/lib/api/cart";
 
 type AddToCartInput = Pick<SchemaAddToCartBody, "variantId" | "quantity">;
@@ -23,18 +22,7 @@ export function useAddToCart() {
         document.cookie = `tte_guest_token=${guestToken}; path=/; max-age=86400`;
       }
 
-      const res = await fetch(apiUrl(API_CART_ENDPOINTS.CART_ITEMS), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(body),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        const msg = typeof data.error === "string" ? data.error : (data.error?.message ?? "Failed to add to cart");
-        throw new ApiError(msg, res.status, data);
-      }
+      const data = await addCartItem({ body });
       return data as SchemaCartResponse;
     },
     onSuccess: (data) => {
