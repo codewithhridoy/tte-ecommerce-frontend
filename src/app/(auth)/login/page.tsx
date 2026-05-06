@@ -30,28 +30,35 @@ interface OtpState {
 }
 
 function useCountdown(targetIso: string) {
-  const [secondsLeft, setSecondsLeft] = useState(() =>
-    Math.max(0, Math.ceil((new Date(targetIso).getTime() - Date.now()) / 1000)),
-  );
+  const compute = () =>
+    Math.max(0, Math.ceil((new Date(targetIso).getTime() - Date.now()) / 1000));
+
+  const [secondsLeft, setSecondsLeft] = useState(compute);
+
+  useEffect(() => {
+    setSecondsLeft(compute());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetIso]);
 
   useEffect(() => {
     if (secondsLeft <= 0) return;
-    const id = setInterval(() => {
-      setSecondsLeft((s) => Math.max(0, s - 1));
-    }, 1000);
+    const id = setInterval(() => setSecondsLeft((s) => Math.max(0, s - 1)), 1000);
     return () => clearInterval(id);
   }, [secondsLeft]);
-
-  useEffect(() => {
-    setSecondsLeft(Math.max(0, Math.ceil((new Date(targetIso).getTime() - Date.now()) / 1000)));
-  }, [targetIso]);
 
   return secondsLeft;
 }
 
 const OTP_LENGTH = 6;
 
-function OtpForm({ otpState, onBack, next }: { otpState: OtpState; onBack: () => void; next: string }) {
+interface OtpFormProps {
+  otpState: OtpState;
+  onBack: () => void;
+  onResendSuccess: (resendAllowedAt: string) => void;
+  next: string;
+}
+
+function OtpForm({ otpState, onBack, onResendSuccess, next }: OtpFormProps) {
   const router = useRouter();
   const [digits, setDigits] = useState<string[]>(Array(OTP_LENGTH).fill(""));
   const inputRefs = useRef<Array<HTMLInputElement | null>>(Array(OTP_LENGTH).fill(null));
@@ -60,7 +67,10 @@ function OtpForm({ otpState, onBack, next }: { otpState: OtpState; onBack: () =>
   const [resendAllowedAt, setResendAllowedAt] = useState(otpState.resendAllowedAt);
   const secondsLeft = useCountdown(resendAllowedAt);
   const canResend = secondsLeft === 0;
+
+  const circumference = 2 * Math.PI * 20;
   const progress = Math.max(0, Math.min(1, secondsLeft / 60));
+  const strokeDashoffset = circumference * (1 - progress);
 
   const code = digits.join("");
   const isComplete = code.length === OTP_LENGTH;
@@ -80,6 +90,7 @@ function OtpForm({ otpState, onBack, next }: { otpState: OtpState; onBack: () =>
   const handleKeyDown = useCallback(
     (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === "Backspace") {
+        e.preventDefault();
         if (digits[index]) {
           setDigits((prev) => {
             const next = [...prev];
@@ -94,7 +105,6 @@ function OtpForm({ otpState, onBack, next }: { otpState: OtpState; onBack: () =>
             return next;
           });
         }
-        e.preventDefault();
       } else if (e.key === "ArrowLeft" && index > 0) {
         inputRefs.current[index - 1]?.focus();
       } else if (e.key === "ArrowRight" && index < OTP_LENGTH - 1) {
@@ -111,8 +121,7 @@ function OtpForm({ otpState, onBack, next }: { otpState: OtpState; onBack: () =>
     const next = Array(OTP_LENGTH).fill("");
     for (let i = 0; i < pasted.length; i++) next[i] = pasted[i] ?? "";
     setDigits(next);
-    const focusIndex = Math.min(pasted.length, OTP_LENGTH - 1);
-    inputRefs.current[focusIndex]?.focus();
+    inputRefs.current[Math.min(pasted.length, OTP_LENGTH - 1)]?.focus();
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -132,8 +141,13 @@ function OtpForm({ otpState, onBack, next }: { otpState: OtpState; onBack: () =>
   async function handleResend() {
     if (!canResend || login.isPending) return;
     try {
-      const result = await login.mutateAsync({ email: otpState.email, password: otpState.password });
-      setResendAllowedAt(result.data.resendAllowedAt);
+      const result = await login.mutateAsync({
+        email: otpState.email,
+        password: otpState.password,
+      });
+      const newResendAllowedAt = result.data.resendAllowedAt;
+      setResendAllowedAt(newResendAllowedAt);
+      onResendSuccess(newResendAllowedAt);
       setDigits(Array(OTP_LENGTH).fill(""));
       inputRefs.current[0]?.focus();
       toast.success("A new code has been sent to your email");
@@ -142,9 +156,6 @@ function OtpForm({ otpState, onBack, next }: { otpState: OtpState; onBack: () =>
     }
   }
 
-  const circumference = 2 * Math.PI * 20;
-  const strokeDashoffset = circumference * (1 - progress);
-
   return (
     <div className="bg-card w-full max-w-sm space-y-6 rounded-lg border p-8">
       <div className="flex items-start gap-3">
@@ -152,7 +163,7 @@ function OtpForm({ otpState, onBack, next }: { otpState: OtpState; onBack: () =>
           type="button"
           onClick={onBack}
           className="text-muted-foreground hover:text-foreground mt-1 transition-colors"
-          aria-label="Back"
+          aria-label="Back to sign in"
         >
           <ArrowLeft className="h-4 w-4" />
         </button>
@@ -175,7 +186,7 @@ function OtpForm({ otpState, onBack, next }: { otpState: OtpState; onBack: () =>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-2">
-          <Label className="text-center block text-sm">Enter verification code</Label>
+          <Label className="block text-center text-sm">Enter verification code</Label>
           <div className="flex justify-center gap-2" onPaste={handlePaste}>
             {digits.map((digit, i) => (
               <input
@@ -190,8 +201,8 @@ function OtpForm({ otpState, onBack, next }: { otpState: OtpState; onBack: () =>
                 onChange={(e) => handleDigitChange(i, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(i, e)}
                 className={[
-                  "border-input bg-background focus:border-primary h-12 w-10 rounded-md border text-center text-lg font-semibold outline-none transition-all",
-                  "focus:ring-primary/20 focus:ring-2",
+                  "border-input bg-background h-12 w-10 rounded-md border text-center text-lg font-semibold outline-none",
+                  "focus:border-primary focus:ring-primary/20 focus:ring-2 transition-all",
                   digit ? "border-primary bg-primary/5" : "",
                   completeLogin.isPending ? "opacity-50" : "",
                 ].join(" ")}
@@ -218,7 +229,7 @@ function OtpForm({ otpState, onBack, next }: { otpState: OtpState; onBack: () =>
             size="sm"
             onClick={handleResend}
             disabled={login.isPending}
-            className="gap-2 transition-all"
+            className="gap-2"
           >
             {login.isPending ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -229,7 +240,7 @@ function OtpForm({ otpState, onBack, next }: { otpState: OtpState; onBack: () =>
           </Button>
         ) : (
           <div className="flex items-center gap-2.5">
-            <div className="relative h-12 w-12">
+            <div className="relative h-12 w-12 shrink-0">
               <svg className="h-12 w-12 -rotate-90" viewBox="0 0 48 48">
                 <circle cx="24" cy="24" r="20" fill="none" className="stroke-muted" strokeWidth="3" />
                 <circle
@@ -237,7 +248,7 @@ function OtpForm({ otpState, onBack, next }: { otpState: OtpState; onBack: () =>
                   cy="24"
                   r="20"
                   fill="none"
-                  className="stroke-primary transition-all duration-1000 ease-linear"
+                  className="stroke-primary transition-[stroke-dashoffset] duration-1000 ease-linear"
                   strokeWidth="3"
                   strokeLinecap="round"
                   strokeDasharray={circumference}
@@ -249,7 +260,8 @@ function OtpForm({ otpState, onBack, next }: { otpState: OtpState; onBack: () =>
               </span>
             </div>
             <p className="text-muted-foreground text-xs">
-              Resend in <span className="text-foreground font-medium tabular-nums">{secondsLeft}s</span>
+              Resend in{" "}
+              <span className="text-foreground font-medium tabular-nums">{secondsLeft}s</span>
             </p>
           </div>
         )}
@@ -262,7 +274,11 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const next = searchParams.get("next") ?? "/account";
   const login = useLogin();
+
+  // Persists across "back" so we can reopen the OTP form without a new API call
+  // if the 60-second resend window is still active.
   const [otpState, setOtpState] = useState<OtpState | null>(null);
+  const [showOtp, setShowOtp] = useState(false);
 
   const form = useForm<CredentialsValues>({
     resolver: zodResolver(credentialsSchema),
@@ -270,21 +286,45 @@ function LoginForm() {
   });
 
   async function onSubmit(values: CredentialsValues) {
+    // If a previous OTP was sent for this email and the resend window hasn't expired,
+    // skip the API call and reopen the OTP form immediately.
+    if (
+      otpState &&
+      otpState.email === values.email &&
+      new Date(otpState.resendAllowedAt) > new Date()
+    ) {
+      // Keep the latest password in case the user needs to resend later.
+      setOtpState((prev) => (prev ? { ...prev, password: values.password } : prev));
+      setShowOtp(true);
+      return;
+    }
+
     try {
       const result = await login.mutateAsync(values);
-      setOtpState({
+      const state: OtpState = {
         userId: result.data.userId,
         resendAllowedAt: result.data.resendAllowedAt,
         email: values.email,
         password: values.password,
-      });
+      };
+      setOtpState(state);
+      setShowOtp(true);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Login failed");
     }
   }
 
-  if (otpState) {
-    return <OtpForm otpState={otpState} onBack={() => setOtpState(null)} next={next} />;
+  if (showOtp && otpState) {
+    return (
+      <OtpForm
+        otpState={otpState}
+        onBack={() => setShowOtp(false)}
+        onResendSuccess={(resendAllowedAt) =>
+          setOtpState((prev) => (prev ? { ...prev, resendAllowedAt } : prev))
+        }
+        next={next}
+      />
+    );
   }
 
   return (
